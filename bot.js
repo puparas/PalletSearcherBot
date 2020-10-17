@@ -28,20 +28,35 @@ bot.help((ctx) => ctx.reply('Выбираем поле для поиска в м
 bot.hears(['Товар', 'Номер паллета', 'Длинное наименование'], (ctx) =>{
     let cellNameForSearch = ctx.update.message.text
     state = cellNameForSearch;
+
     ctx.reply(`Понял! Отправьте текст для поиска по полю "${cellNameForSearch}"`)
 })
 
 // Обрабатываем отправленные боту сообщению. Если файл и это табличка, то отправляем ее на сохранение. Если текст, то идем искать по табличке.
 bot.on('message', (ctx) => {
-    if(ctx.updateSubTypes == 'document' && ctx.update.message.document.mime_type == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'){
-        saveNewSheet(ctx)
-    }else if(ctx.updateType == 'message'){
+    if(ctx.updateSubTypes == 'document'){
+        if(ctx.update.message.document.mime_type == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'){
+            saveNewSheet(ctx)
+        }else{
+            ctx.reply('Не тот формат файла!')
+        }
+
+    }else if(ctx.updateType == 'message' && state){
         if(ctx.update.message.text){
             let text = ctx.update.message.text
             let resObj = searchOnSheet(text)
             // console.log(resObj)
-            let msg = `По полю "${(state) ? state : 'ВЫБЕРИ ПОЛЕ ДЛЯ ПОИСКА, МУДЕНЬ'}" найдено: ${(resObj === {}) ? 'НИХУЯ' : resObj}`
-            ctx.reply(msg)
+
+            if(!resObj){
+                ctx.reply(`Либо ничего не найдено, либо ты забыл выбрать поле для поиска!!`)
+            }else{
+                let messageIterator = printfIterator(resObj)
+                while(messageIterator.isDone().done) {
+                    ctx.reply(messageIterator.next().value)
+                }
+            }
+
+
             // let msg = '```' + resObj + '``` ты найдешь в паллете номер ' + palletNumber
         }
     }
@@ -74,18 +89,53 @@ function searchOnSheet(text){
     let worksheet = workbook.Sheets[firstSheetName]
     let jsonWorksheet = XLSX.utils.sheet_to_json(worksheet)
     let result = []
-    let strRegexp = text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
-    let pattern = new RegExp(strRegexp, 'ig');
-    jsonWorksheet.forEach((val, index)=>{
-        if(pattern.test(val[state])){
-            console.log(val);
-            result.push(val)
-        }
+    if(state == 'Длинное наименование'){
+        let strRegexp = text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+        let pattern = new RegExp(strRegexp, 'i');
+        jsonWorksheet.forEach((val, index)=>{
+            if(pattern.test(val[state])){
+                result = [...result, val]
+            }
 
-    })
+        })
+    }else{
+        jsonWorksheet.forEach((val, index)=>{
+            if(val[state] == text){
+                result = [...result, val]
+            }
+
+        })
+    }
+
     // console.log(result);
-    return result
+    return (Object.entries(result).length === 0) ? false : result
 
+
+}
+
+function printfIterator(objToString){
+    let nextIndex = 0;
+    if(!objToString){
+        return ''
+    }
+    return {
+        isDone: function() {
+            return {done: nextIndex < objToString.length}
+        },
+        next: function() {
+            let string = ''
+            if(nextIndex < objToString.length){
+                let cell = objToString[nextIndex]
+                for (let [name, value] of Object.entries(cell)) {
+                    string += `${name}: ${value} \n`
+                }
+                nextIndex++
+                return {value: string, done: false}
+            }else{
+                return {done: true}
+            }
+        }
+    }
 
 }
 
