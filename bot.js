@@ -28,7 +28,6 @@ bot.help((ctx) => ctx.reply('Выбираем поле для поиска в м
 bot.hears(['Товар', 'Номер паллета', 'Длинное наименование'], (ctx) =>{
     let cellNameForSearch = ctx.update.message.text
     state = cellNameForSearch;
-
     ctx.reply(`Понял! Отправьте текст для поиска по полю "${cellNameForSearch}"`)
 })
 
@@ -62,8 +61,6 @@ bot.on('message', (ctx) => {
     }
 })
 
-
-
 // Функция для обработки новой таблички скинутой в чат. Берем ссылку у ТГ и с скачиваем рядом
 function saveNewSheet(ctx){
     ctx.telegram.getFileLink(ctx.update.message.document.file_id).then(url => {
@@ -72,7 +69,6 @@ function saveNewSheet(ctx){
                 .on('finish', () => {
                     let date = new Date()
                     ctx.reply(`Файл успешно заменен! дата замены ${date.toLocaleString()}`)
-
                 })
                 .on('error', e => ctx.reply(`Ошибка при обновлении файла. Отправить это сообщение @PUPARAS ${e}`))
         })
@@ -96,7 +92,6 @@ function searchOnSheet(text){
             if(pattern.test(val[state])){
                 result = [...result, val]
             }
-
         })
     }else{
         jsonWorksheet.forEach((val, index)=>{

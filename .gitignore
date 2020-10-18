@@ -1,3 +1,4 @@
+*.txt
+*.xlsx
 /node_modules/
 /.idea/
-/pallet_table.xlsx/
