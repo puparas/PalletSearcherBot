@@ -19,11 +19,15 @@ async function botInit(ctx) {
         if (!fileCheck) {
             return ctx.replyWithMarkdown('Нет таблицы для работы. Скиньте файл в формате *xlsx* в чат и повторите команду */start*')
         }
+
+
         let fileCTdate = await SearchC.fileGetCTDate()
         ctx.replyWithMarkdown(`Файл был залит: *${fileCTdate}*`)
 
+
+
         let menu = await SearchC.makeMenu()
-        ctx.reply('Выберите поле в котором будет происходить поиск', Markup
+        ctx.reply('Выберете поле для поиска в меню', Markup
             .keyboard(menu)
             .oneTime()
             .resize()
@@ -37,9 +41,23 @@ async function botInit(ctx) {
         })
 
 
+        bot.on('message',   (ctx) => {
+            let text = ctx.update.message.text
+            let state = SearchC.getState()
+            if(!state)
+                ctx.replyWithMarkdown('Не указанно поле для поиска')
+            SearchC.search(text)
+            let messageIterator = SearchC.getResultMessageWithDelay()
+            while(messageIterator.isDone().done) {
+                ctx.replyWithMarkdown( messageIterator.next().value,
+                    Markup.inlineKeyboard([
+                        Markup.callbackButton('Добавить комментарий к товару', 'test'),
+                    ]).extra())
+            }
+        })
 
 
-    } catch (e) {
+    } catch (e) {d
         ctx.reply(`Err: ${e}`)
     }
 
@@ -51,14 +69,14 @@ async function botInit(ctx) {
 
 bot.help((ctx)=>{
     ctx.replyWithMarkdown(`Бот ищет по таблицке товаров по выбранному полю.\n
-    Что бы обновить табличку для поиска скиньте файл в фотмате *XLSX* в чат и дождитесь сообщения об успешном обновлении файла. \n 
+    Что бы обновить табличку для поиска скиньте файл в фотмате *LSX* в чат и дождитесь сообщения об успешном обновлении файла. \n 
     Что бы начать поиск выберите поле для поиска в меню и введите текст для поиска. \n 
     Для вывода истории обновления файла отправьте команду */info* \n
     Для обновления кол-ва товара ответьте на сообщение с результатом поиска и напишите новое кол-во`)
 })
 
 bot.command('info',(ctx)=>{
-    ctx.replyWithMarkdown('Файл содержит лог обновления файла таблицы. Когда и кем был изменен')
+    ctx.replyWithMarkdown('Файл содержит лог обновления файла таблицы. *Когда* и *кем* был изменен')
     ctx.replyWithDocument({
         source: SearchC.getLogFilePath(),
         filename: 'Лог изменений файла таблицы.txt'
@@ -68,7 +86,7 @@ bot.command('info',(ctx)=>{
 bot.on('document',  async (ctx) => {
     let response = await SearchC.saveFile(ctx)
     let date = new Date()
-    ctx.reply(`Файл успешно заменен/добавлен! дата замены/добавления ${date.toLocaleString()}`)
+    ctx.reply(`Файл успешно заменен / добавлен! дата замены / добавления *${date.toLocaleString()}*`)
 })
 
 

@@ -10,6 +10,7 @@ class Bot {
         this.filePath = filePath
         this.state = ''
         this.fileLogPath = 'logFileChange.txt'
+        this.searchResult = []
         this.fileExist().then((bool)=>{
             if(bool)
                 this.prepearFileData()
@@ -20,6 +21,9 @@ class Bot {
 
     setState(state){
         this.state = state
+    }
+    getState(){
+        return this.state
     }
     getLogFilePath(){
         return this.fileLogPath
@@ -51,14 +55,9 @@ class Bot {
     makeMenu() {
         return new Promise((resolve, reject) => {
                 if(this.xlsxData){
-                    this.menuArray = []
-                    for (const [key, value] of Object.entries(this.xlsxData)) {
-                        if(key == 'A2'){
-                            break
-                        }
-                        if(value.v)
-                            this.menuArray.push(value.v)
-                    }
+                    let keysFirstObj = Object.keys(this.xlsxData[0])
+                    this.menuArray = (keysFirstObj.length > 0) ? keysFirstObj : ['Возможно таблица пуста!']
+
                     resolve(this.menuArray)
                 }else{
                     this.prepearFileData(this)
@@ -72,6 +71,7 @@ class Bot {
         let xlsxSource = XLSX.readFile(this.filePath)
         let first_sheet_name = xlsxSource.SheetNames[0];
         this.xlsxData = xlsxSource.Sheets[first_sheet_name];
+        this.xlsxData = XLSX.utils.sheet_to_json(this.xlsxData, )
         if(callback)
             callback()
     }
@@ -95,6 +95,70 @@ class Bot {
             })
         })
     }
-}
 
+    search(text){
+        if (this.state == 'Длинное наименование') {
+            this.searchResult = this.regexpSearch(text)
+        }else if(this.state == 'Товар' || this.state == 'Sup') {
+            this.searchResult = this.supLastSixNumberSearch(text)
+        }else{
+            this.searchResult = this.directEqlSearch(text)
+        }
+    }
+    regexpSearch(text){
+        let strRegexp = text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+        let pattern = new RegExp(strRegexp, 'i');
+        let result = this.xlsxData.filter((val)=>{
+            if (!val[this.state]){
+                return false}
+            if(pattern.test(val[this.state])){
+                return val
+            }
+        })
+        return result
+    }
+    directEqlSearch(number){
+        let result = this.xlsxData.filter((val) => {
+            if (!val[this.state]){
+                return false}
+            return val[this.state] == number
+        })
+        return result
+    }
+    supLastSixNumberSearch(number){
+        let result = this.xlsxData.filter((val) => {
+            if (!val[this.state]){
+                return false}
+            return (val[this.state].length > 6) ? val[this.state].slice(6,) == number : val[this.state] == number
+        })
+        return result
+    }
+    // function sleep(ms){
+    //     return new Promise(resolve=>{
+    //         setTimeout(resolve,ms)
+    //     })
+    // }
+    getResultMessageWithDelay(){
+        let nextIndex = 0;
+        return {
+            isDone: () => {
+                return {done: nextIndex < this.searchResult.length}
+            },
+            next: () => {
+                let string = ''
+                if(nextIndex < this.searchResult.length){
+                    let cell = this.searchResult[nextIndex]
+                    for (let [name, value] of Object.entries(cell)) {
+                        string += `${name}: *${value}* \n`
+                    }
+                    nextIndex++
+                    return {value: string, done: false}
+                }else{
+                    return {done: true}
+                }
+            }
+        }
+    }
+
+}
 module.exports = Bot
