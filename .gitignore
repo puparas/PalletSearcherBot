@@ -1,4 +1,5 @@
 *.txt
 *.xlsx
+.xlsx#
 /node_modules/
 /.idea/

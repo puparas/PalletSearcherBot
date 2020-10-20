@@ -2,6 +2,7 @@
 const BotClass = require('./BotClass')
 const Telegraf = require('telegraf')
 const Markup = require('telegraf/markup')
+const Extra = require('telegraf/extra')
 
 const tgAPIkey = '1320517242:AAG_Q6RO0zOcPPpMORtGqYdjBKThDQjP_yY'
 const bot = new Telegraf(tgAPIkey)
@@ -41,23 +42,46 @@ async function botInit(ctx) {
         })
 
 
-        bot.on('message',   (ctx) => {
+        bot.on('message',   async (ctx) => {
             let text = ctx.update.message.text
             let state = SearchC.getState()
-            if(!state)
-                ctx.replyWithMarkdown('Не указанно поле для поиска')
-            SearchC.search(text)
-            let messageIterator = SearchC.getResultMessageWithDelay()
-            while(messageIterator.isDone().done) {
-                ctx.replyWithMarkdown( messageIterator.next().value,
-                    Markup.inlineKeyboard([
-                        Markup.callbackButton('Добавить комментарий к товару', 'test'),
-                    ]).extra())
+            let GlobalIdFotCommentState = SearchC.getGlobalIdForComment()
+            if(GlobalIdFotCommentState){
+                let commentAdded = await SearchC.addCommentToProductFromGlobalIndex(ctx)
+                 if(commentAdded){
+                     ctx.reply('Комментарий успешно добавлен', Markup
+                         .keyboard(menu)
+                         .oneTime()
+                         .resize()
+                         .extra())
+                 }
+
+            }else{
+                if(!state)
+                    await ctx.replyWithMarkdown('Не указанно поле для поиска')
+                SearchC.search(text)
+                let messageIterator = SearchC.getResultMessageWithDelay()
+                while(messageIterator.isDone().done) {
+                    let message = await messageIterator.next()
+                    await ctx.replyWithMarkdown( message.value,
+                        ((message.resultEmpty) ? Markup.inlineKeyboard([
+                            Markup.callbackButton(`Добавить комментарий к товару`, message.globalElIngex),
+                            Markup.callbackButton(message.curMessageNumber + 'й результат из ' + message.allMessageCount, 'test', ),
+                        ], ).resize().extra(): ''))
+                }
             }
+
+
+
+        })
+        bot.on('callback_query', (ctx) => {
+            let globalIndexElementOnTable = ctx.update.callback_query.data
+            let messageId = ctx.update.callback_query.message.message_id
+            SearchC.setGlobalIdForComment(globalIndexElementOnTable)
+            return ctx.replyWithMarkdown("*!!!ВНИМАНИЕ!!! следующее сообщение будет записано как комментарий к данному товару *", Extra.inReplyTo(messageId))
         })
 
-
-    } catch (e) {d
+    } catch (e) {
         ctx.reply(`Err: ${e}`)
     }
 
@@ -69,10 +93,10 @@ async function botInit(ctx) {
 
 bot.help((ctx)=>{
     ctx.replyWithMarkdown(`Бот ищет по таблицке товаров по выбранному полю.\n
-    Что бы обновить табличку для поиска скиньте файл в фотмате *LSX* в чат и дождитесь сообщения об успешном обновлении файла. \n 
-    Что бы начать поиск выберите поле для поиска в меню и введите текст для поиска. \n 
-    Для вывода истории обновления файла отправьте команду */info* \n
-    Для обновления кол-ва товара ответьте на сообщение с результатом поиска и напишите новое кол-во`)
+Что бы обновить табличку для поиска скиньте файл в фотмате *LSX* в чат и дождитесь сообщения об успешном обновлении файла. \n 
+Что бы начать поиск выберите поле для поиска в меню и введите текст для поиска. \n 
+Для вывода истории обновления файла отправьте команду */info* \n
+Что бы оставить комментарий к товару нажмите на кнопку под сообщением с результатом`)
 })
 
 bot.command('info',(ctx)=>{

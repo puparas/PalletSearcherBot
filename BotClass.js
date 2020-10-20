@@ -9,6 +9,7 @@ class Bot {
     constructor(filePath) {
         this.filePath = filePath
         this.state = ''
+        this.tmpGlobalIdFotComment = ''
         this.fileLogPath = 'logFileChange.txt'
         this.searchResult = []
         this.fileExist().then((bool)=>{
@@ -21,6 +22,12 @@ class Bot {
 
     setState(state){
         this.state = state
+    }
+    setGlobalIdForComment(index){
+        this.tmpGlobalIdFotComment = index
+    }
+    getGlobalIdForComment(index){
+        return this.tmpGlobalIdFotComment
     }
     getState(){
         return this.state
@@ -75,6 +82,21 @@ class Bot {
         if(callback)
             callback()
     }
+    async addCommentToProductFromGlobalIndex(ctx){
+        let comment = ctx.update.message.text
+        let autor = `${ctx.update.message.from.first_name} aka ${ctx.update.message.from.username}`
+        let commentWithAutor = `${comment} ( ${autor} )\n`
+
+        this.xlsxData[this.tmpGlobalIdFotComment] = {...this.xlsxData[this.tmpGlobalIdFotComment], ...{'Комментарии': commentWithAutor}}
+        let sheet = XLSX.utils.json_to_sheet(this.xlsxData)
+        let newBook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(newBook, sheet, 'Лист 1')
+        return new Promise((resolve) => {
+            XLSX.writeFile(newBook, this.filePath)
+            this.tmpGlobalIdFotComment = ''
+            resolve(true)
+        })
+    }
     saveFile(ctx){
         return ctx.telegram.getFileLink(ctx.update.message.document.file_id).then(url => {
             return Axios({url, responseType: 'stream'}).then(response => {
@@ -86,10 +108,9 @@ class Bot {
     }
     logFileChange(ctx){
         return new Promise((resolve, reject)=>{
-            let fName = ctx.update.message.from.first_name
-            let lName = ctx.update.message.from.last_name
+            let autor = `${ctx.update.message.from.first_name} aka ${ctx.update.message.from.username}`
             let date = new Date()
-            let str = `Файл был изменён ${date} пользователем ${fName} ${lName} n ******************************************** \n`
+            let str = `Файл был изменён ${date} пользователем ${autor}  \n ******************************************** \n`
             fs.appendFile(this.fileLogPath, str, (err)=>{
                 if (err) throw err
             })
@@ -98,19 +119,25 @@ class Bot {
 
     search(text){
         if (this.state == 'Длинное наименование') {
-            this.searchResult = this.regexpSearch(text)
+            var result = this.regexpSearch(text)
         }else if(this.state == 'Товар' || this.state == 'Sup') {
-            this.searchResult = this.supLastSixNumberSearch(text)
+            var result = this.supLastSixNumberSearch(text)
         }else{
-            this.searchResult = this.directEqlSearch(text)
+            var result = this.directEqlSearch(text)
         }
+        this.searchResult = (result.length) ? result : [{'Результат':'Ничего не найдено'}]
     }
     regexpSearch(text){
         let strRegexp = text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
         let pattern = new RegExp(strRegexp, 'i');
-        let result = this.xlsxData.filter((val)=>{
+        let result = this.xlsxData.filter((val, i)=>{
             if (!val[this.state]){
                 return false}
+            val = this.setInumValToIbj(val, i)
+            // Object.defineProperty(val, 'globalIndex', {
+            //     value: i,
+            //     enumerable: false
+            // })
             if(pattern.test(val[this.state])){
                 return val
             }
@@ -118,46 +145,61 @@ class Bot {
         return result
     }
     directEqlSearch(number){
-        let result = this.xlsxData.filter((val) => {
+        let result = this.xlsxData.filter((val, i) => {
             if (!val[this.state]){
                 return false}
+            val = this.setInumValToIbj(val, i)
+            // Object.defineProperty(val, 'globalIndex', {
+            //     value: i,
+            //     enumerable: false
+            // })
             return val[this.state] == number
         })
         return result
     }
     supLastSixNumberSearch(number){
-        let result = this.xlsxData.filter((val) => {
+        let result = this.xlsxData.filter((val, i) => {
             if (!val[this.state]){
                 return false}
-            return (val[this.state].length > 6) ? val[this.state].slice(6,) == number : val[this.state] == number
+            val = this.setInumValToIbj(val, i)
+            // Object.defineProperty(val, 'globalIndex', {
+            //     value: i,
+            //     enumerable: false
+            // })
+            return (val[this.state].length > 6) ? val[this.state].slice(-6, ) == number : val[this.state] == number
         })
         return result
     }
-    // function sleep(ms){
-    //     return new Promise(resolve=>{
-    //         setTimeout(resolve,ms)
-    //     })
-    // }
     getResultMessageWithDelay(){
         let nextIndex = 0;
+        let messageCoutn = this.searchResult.length
         return {
             isDone: () => {
-                return {done: nextIndex < this.searchResult.length}
+                return {done: nextIndex < messageCoutn}
             },
-            next: () => {
+            next: async () => {
                 let string = ''
-                if(nextIndex < this.searchResult.length){
-                    let cell = this.searchResult[nextIndex]
-                    for (let [name, value] of Object.entries(cell)) {
+                await this.timeout(200)
+
+                    let row = this.searchResult[nextIndex]
+                    for (let [name, value] of Object.entries(row)) {
                         string += `${name}: *${value}* \n`
                     }
                     nextIndex++
-                    return {value: string, done: false}
-                }else{
-                    return {done: true}
-                }
+                    return {value: string, allMessageCount: messageCoutn, curMessageNumber: nextIndex, globalElIngex: row.globalIndex,  resultEmpty: (row[this.state])}
+
             }
         }
+    }
+    timeout(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    setInumValToIbj(obj, val) {
+        return  Object.defineProperty(obj, 'globalIndex', {
+            value: val,
+            enumerable: false
+        })
+
     }
 
 }
