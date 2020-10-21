@@ -34,7 +34,18 @@ async function botInit(ctx) {
             .resize()
             .extra())
 
-
+        bot.hears(['Комментарии'], async ( ctx) =>{
+            SearchC.searchProductsWithComments()
+            let messageIterator = await SearchC.getResultMessageWithDelay()
+            while(messageIterator.isDone().done) {
+                let message = await messageIterator.next()
+                await ctx.replyWithMarkdown( message.value,
+                    ((message.resultEmpty) ? Markup.inlineKeyboard([
+                        Markup.callbackButton(`Добавить комментарий к товару`, message.globalElIngex),
+                        Markup.callbackButton(message.curMessageNumber + 'й результат из ' + message.allMessageCount, 'test', ),
+                    ], ).resize().extra(): ''))
+            }
+        })
         bot.hears(menu, (ctx) =>{
             let text = ctx.update.message.text
             SearchC.setState(text)
@@ -47,9 +58,10 @@ async function botInit(ctx) {
             let state = SearchC.getState()
             let GlobalIdFotCommentState = SearchC.getGlobalIdForComment()
             if(GlobalIdFotCommentState){
+                let menu = await SearchC.makeMenu()
                 let commentAdded = await SearchC.addCommentToProductFromGlobalIndex(ctx)
                  if(commentAdded){
-                     ctx.reply('Комментарий успешно добавлен', Markup
+                     return ctx.reply('Комментарий успешно добавлен', Markup
                          .keyboard(menu)
                          .oneTime()
                          .resize()
@@ -108,6 +120,8 @@ bot.command('info',(ctx)=>{
 })
 
 bot.on('document',  async (ctx) => {
+    if(ctx.update.message.document.mime_type != 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        return ctx.reply(`Не тот формат файла! Нужен *XLSX* файл`)
     let response = await SearchC.saveFile(ctx)
     let date = new Date()
     ctx.reply(`Файл успешно заменен / добавлен! дата замены / добавления *${date.toLocaleString()}*`)

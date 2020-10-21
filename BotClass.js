@@ -21,6 +21,7 @@ class Bot {
     }
 
     setState(state){
+        this.tmpGlobalIdFotComment = ''
         this.state = state
     }
     setGlobalIdForComment(index){
@@ -62,7 +63,7 @@ class Bot {
     makeMenu() {
         return new Promise((resolve, reject) => {
                 if(this.xlsxData){
-                    let keysFirstObj = Object.keys(this.xlsxData[0])
+                    let keysFirstObj = [... new Set(Object.keys(this.xlsxData).map((i)=>{return Object.keys(this.xlsxData[i])}).flat())]
                     this.menuArray = (keysFirstObj.length > 0) ? keysFirstObj : ['Возможно таблица пуста!']
 
                     resolve(this.menuArray)
@@ -85,7 +86,7 @@ class Bot {
     async addCommentToProductFromGlobalIndex(ctx){
         let comment = ctx.update.message.text
         let autor = `${ctx.update.message.from.first_name} aka ${ctx.update.message.from.username}`
-        let commentWithAutor = `\n ${comment} ( ${autor} )`
+        let commentWithAutor = `\n${comment} ( ${autor} ) \n—————————————————— `
         let curComments = this.xlsxData[this.tmpGlobalIdFotComment]['Комментарии'] ? this.xlsxData[this.tmpGlobalIdFotComment]['Комментарии'] : ''
         this.xlsxData[this.tmpGlobalIdFotComment]['Комментарии'] = curComments + commentWithAutor
         let sheet = XLSX.utils.json_to_sheet(this.xlsxData)
@@ -117,8 +118,13 @@ class Bot {
         })
     }
 
+    searchProductsWithComments() {
+        this.state = 'Комментарии'
+        return this.search('(.*)')
+    }
+
     search(text){
-        if (this.state == 'Длинное наименование') {
+        if (this.state == 'Длинное наименование' || this.state == 'Комментарии') {
             var result = this.regexpSearch(text)
         }else if(this.state == 'Товар' || this.state == 'Sup') {
             var result = this.supLastSixNumberSearch(text)
@@ -127,17 +133,15 @@ class Bot {
         }
         this.searchResult = (result.length) ? result : [{'Результат':'Ничего не найдено'}]
     }
-    regexpSearch(text){
-        let strRegexp = text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+    regexpSearch(text, skipReplace){
+        if(this.state != 'Комментарии'){
+            var strRegexp = text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+        }
         let pattern = new RegExp(strRegexp, 'i');
         let result = this.xlsxData.filter((val, i)=>{
             if (!val[this.state]){
                 return false}
             val = this.setInumValToIbj(val, i)
-            // Object.defineProperty(val, 'globalIndex', {
-            //     value: i,
-            //     enumerable: false
-            // })
             if(pattern.test(val[this.state])){
                 return val
             }
