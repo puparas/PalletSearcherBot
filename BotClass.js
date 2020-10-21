@@ -85,9 +85,9 @@ class Bot {
     async addCommentToProductFromGlobalIndex(ctx){
         let comment = ctx.update.message.text
         let autor = `${ctx.update.message.from.first_name} aka ${ctx.update.message.from.username}`
-        let commentWithAutor = `${comment} ( ${autor} )\n`
-
-        this.xlsxData[this.tmpGlobalIdFotComment] = {...this.xlsxData[this.tmpGlobalIdFotComment], ...{'Комментарии': commentWithAutor}}
+        let commentWithAutor = `\n ${comment} ( ${autor} )`
+        let curComments = this.xlsxData[this.tmpGlobalIdFotComment]['Комментарии'] ? this.xlsxData[this.tmpGlobalIdFotComment]['Комментарии'] : ''
+        this.xlsxData[this.tmpGlobalIdFotComment]['Комментарии'] = curComments + commentWithAutor
         let sheet = XLSX.utils.json_to_sheet(this.xlsxData)
         let newBook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(newBook, sheet, 'Лист 1')
