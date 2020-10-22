@@ -80,7 +80,7 @@ class Bot {
         let first_sheet_name = xlsxSource.SheetNames[0];
         this.xlsxData = xlsxSource.Sheets[first_sheet_name];
         this.xlsxData = XLSX.utils.sheet_to_json(this.xlsxData, )
-        if(callback)
+        if(typeof callback == "function")
             callback()
     }
     async addCommentToProductFromGlobalIndex(ctx){
