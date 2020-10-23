@@ -122,9 +122,10 @@ bot.command('info',(ctx)=>{
 bot.on('document',  async (ctx) => {
     if(ctx.update.message.document.mime_type != 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         return ctx.reply(`Не тот формат файла! Нужен *XLSX* файл`)
-    let response = await SearchC.saveFile(ctx)
+    await SearchC.saveFile(ctx)
+    await SearchC.makeMenu
     let date = new Date()
-    ctx.reply(`Файл успешно заменен / добавлен! дата замены / добавления *${date.toLocaleString()}*`)
+    await ctx.reply(`Файл успешно заменен / добавлен! дата замены / добавления *${date.toLocaleString()}*. Отправьте комманду /start`)
 })
 
 
