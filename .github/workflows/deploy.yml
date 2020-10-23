@@ -8,11 +8,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: id
-      run: id
-    - name: Install sudo package
-      run: apt-get install sudo
     - uses: actions/checkout@v1
+    - name: Install sudo package
+      run: apt-get update && apt-get install sudo
     - name: Install Node.js
       uses: actions/setup-node@v1
       with:
@@ -20,7 +18,7 @@ jobs:
     - name: Install npm dependencies
       run: npm install
     - name: Run build task
-      run: npm run build --if-present
+      run: npm ci
     - name: Deploy to Server
       uses: easingthemes/ssh-deploy@v2.1.5
       env:
