@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Install sudo package
+      run: apt update && apt install sudo
     - uses: actions/checkout@v1
     - name: Install Node.js
       uses: actions/setup-node@v1
