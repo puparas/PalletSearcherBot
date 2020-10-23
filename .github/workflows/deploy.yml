@@ -1,0 +1,29 @@
+name: Node CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: '14.x'
+    - name: Install npm dependencies
+      run: npm install
+    - name: Run build task
+      run: npm ci
+    - name: Deploy to Server
+      uses: trendyminds/github-actions-rsync@master
+      with:
+        RSYNC_OPTIONS: -avzr --delete
+        RSYNC_TARGET: ${{ secrets.PATH }}
+        RSYNC_SOURCE: /
+      env:
+        SSH_PRIVATE_KEY: ${{secrets.SSH_KEY}}
+        SSH_USERNAME: ${{secrets.VDSINA_LOGIN}}
+        SSH_HOSTNAME: ${{secrets.HOST}}
