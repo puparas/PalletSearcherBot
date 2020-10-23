@@ -20,7 +20,7 @@ jobs:
     - name: Deploy to Server
       uses: trendyminds/github-actions-rsync@master
       with:
-        RSYNC_OPTIONS: -avzr --delete
+        RSYNC_OPTIONS: -avzr --remove-source-files
         RSYNC_TARGET: ${{ secrets.PATH }}
         RSYNC_SOURCE: /
       env:
