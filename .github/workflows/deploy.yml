@@ -18,11 +18,12 @@ jobs:
     - name: Run build task
       run: npm ci
     - name: Deploy to Server
-      uses: easingthemes/ssh-deploy@v2.1.5
+      uses: trendyminds/github-actions-rsync@master
+      with:
+        RSYNC_OPTIONS: -avzr --delete
+        RSYNC_TARGET: ${{ secrets.PATH }}
+        RSYNC_SOURCE: /
       env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
-          ARGS: "-avzr --delete"
-          SOURCE: "dist/"
-          REMOTE_HOST: ${{ secrets.HOST }}
-          REMOTE_USER: ${{ secrets.VDSINA_LOGIN }}
-          TARGET: ${{ secrets.PATH }}
+        SSH_PRIVATE_KEY: ${{secrets.SSH_KEY}}
+        SSH_USERNAME: ${{secrets.VDSINA_LOGIN}}
+        SSH_HOSTNAME: ${{secrets.HOST}}
