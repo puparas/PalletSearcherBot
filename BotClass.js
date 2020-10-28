@@ -61,11 +61,13 @@ class Bot {
     }
 
     makeMenu() {
+        if(this.menuArray){
+            return
+        }
         return new Promise((resolve, reject) => {
                 if(this.xlsxData){
                     let keysFirstObj = [... new Set(Object.keys(this.xlsxData).map((i)=>{return Object.keys(this.xlsxData[i])}).flat())]
                     this.menuArray = (keysFirstObj.length > 0) ? keysFirstObj : ['Возможно таблица пуста!']
-
                     resolve(this.menuArray)
                 }else{
                     this.prepearFileData(this)
@@ -98,7 +100,7 @@ class Bot {
             resolve(true)
         })
     }
-    saveFile(ctx){
+    async saveFile(ctx){
         return ctx.telegram.getFileLink(ctx.update.message.document.file_id).then(url => {
             return Axios({url, responseType: 'stream'}).then(response => {
                 return response.data.pipe(fs.createWriteStream(this.filePath))
@@ -124,9 +126,9 @@ class Bot {
     }
 
     search(text){
-        if (this.state == 'Длинное наименование' || this.state == 'Комментарии') {
+        if (this.state == 'Товар' || this.state == 'Комментарии') {
             var result = this.regexpSearch(text)
-        }else if(this.state == 'Товар' || this.state == 'Sup') {
+        }else if( this.state == 'sup') {
             var result = this.supLastSixNumberSearch(text)
         }else{
             var result = this.directEqlSearch(text)

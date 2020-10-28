@@ -1,5 +1,6 @@
 *.txt
 *.xlsx
 .xlsx#
+conf.js
 /node_modules/
 /.idea/

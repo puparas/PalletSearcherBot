@@ -3,8 +3,9 @@ const BotClass = require('./BotClass')
 const Telegraf = require('telegraf')
 const Markup = require('telegraf/markup')
 const Extra = require('telegraf/extra')
+const conf = require('./conf')
 
-const tgAPIkey = '1320517242:AAG_Q6RO0zOcPPpMORtGqYdjBKThDQjP_yY'
+const tgAPIkey = conf.API_KEY
 const bot = new Telegraf(tgAPIkey)
 const SearchC = new BotClass(`pallet_table.xlsx`)
 
@@ -51,7 +52,15 @@ async function botInit(ctx) {
             SearchC.setState(text)
             ctx.replyWithMarkdown(`Понял! Отправьте текст для поиска по полю *${text}*`)
         })
+        bot.inlineQuery('/(.*)/', ()=>{})
+        bot.on('inline_query', (ctx) => {
+            const result = []
+            // Explicit usage
+            ctx.telegram.answerInlineQuery(ctx.inlineQuery.id, result)
 
+            // Using context shortcut
+            ctx.answerInlineQuery(result)
+        })
 
         bot.on('message',   async (ctx) => {
             let text = ctx.update.message.text
