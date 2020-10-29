@@ -61,9 +61,6 @@ class Bot {
     }
 
     makeMenu() {
-        if(this.menuArray){
-            return
-        }
         return new Promise((resolve, reject) => {
                 if(this.xlsxData){
                     let keysFirstObj = [... new Set(Object.keys(this.xlsxData).map((i)=>{return Object.keys(this.xlsxData[i])}).flat())]
