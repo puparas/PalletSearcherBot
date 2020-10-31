@@ -8,6 +8,7 @@ const fsPromises = fs.promises;
 class Bot {
     constructor(filePath) {
         this.filePath = filePath
+        this.tmp_filePath = 'tmp_'+this.filePath
         this.state = ''
         this.tmpGlobalIdFotComment = ''
         this.fileLogPath = 'logFileChange.txt'
@@ -100,9 +101,17 @@ class Bot {
     async saveFile(ctx){
         return ctx.telegram.getFileLink(ctx.update.message.document.file_id).then(url => {
             return Axios({url, responseType: 'stream'}).then(response => {
-                return response.data.pipe(fs.createWriteStream(this.filePath))
+                response.data.pipe(fs.createWriteStream(this.tmp_filePath)).on('finish', ()=>{
+                    fs.rename(this.tmp_filePath, this.filePath, (err) => {
+                        if (err) {
+                            throw err
+                        }
+                        this.prepearFileData()
+                    })
+                })
             }).then(()=>{
                 this.logFileChange(ctx)
+                return true
             })
         })
     }
